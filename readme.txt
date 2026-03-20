@@ -17,7 +17,7 @@ Open World gives you full control over your website translations — built entir
 **Key Features:**
 
 * 🚀 **Zero Database Overhead** — Uses WordPress native text domains. No extra columns, no schema changes to your existing tables.
-* 🤖 **DeepL Auto-Translate** — Bulk-translate your entire site via DeepL API. Supports both Free and Pro plans, with automatic batch handling and rate-limit management.
+* 🤖 **DeepL & Google Auto-Translate** — Bulk-translate your entire site using Google Translate Free (built-in) or the DeepL API. Supports automatic batch handling and resilient rate-limit management.
 * 🔍 **Smart Scanner** — Crawls your live frontend and captures only the strings actually rendered on your pages. Skip thousands of unused strings from plugins you barely use.
 * ✏️ **Inline Translation Editor** — Translate strings visually while browsing your site. A sidebar slides in from the admin bar — just click any text and it jumps straight to the right string.
 * 🛒 **Full WooCommerce Support** — Product titles, descriptions, categories, checkout fields, and order emails are all translated automatically per language.
@@ -35,9 +35,9 @@ The scanner sends authenticated internal requests to your frontend pages and cap
 
 Open World hooks into WooCommerce at every level: product edit screens get a tabbed translation UI, checkout field labels are translated dynamically, and order confirmation emails are sent in the customer's language.
 
-= DeepL Integration =
+= Auto-Translate Engine =
 
-Connect your DeepL Free or Pro API key and auto-translate your entire store in batches. Quota usage is shown in the plugin settings and cached to minimize API calls.
+Translate your entire store in automated batches without typing a word. Open World comes with **Google Translate Free natively built-in** with zero configuration required. Alternatively, you can connect a DeepL Free or Pro API key if you prefer their translation engine. Both integrations feature advanced, self-healing network wrappers to smoothly push through massive batches of 100,000+ strings without timeouts. Quota usage for DeepL is shown locally to minimize API hits.
 
 = SEO Plugin Integrations =
 
@@ -56,13 +56,13 @@ No configuration needed. After a Smart Scan, simply translate your SEO strings i
 2. Activate the plugin through the **Plugins** menu in WordPress.
 3. Navigate to **Open World → Languages** and add your target languages.
 4. Go to **Settings** and run a **Smart Scan** to collect translatable strings.
-5. Go to **Translations**, pick a language, and start translating — or enter a DeepL API key to auto-translate in bulk.
+5. Go to **Translations**, pick a language, and manually translate, or click **Auto-Translate** to automatically translate everything using Google Free or DeepL.
 
 == Frequently Asked Questions ==
 
 = Do I need a DeepL API key? =
 
-No. DeepL is optional. You can translate everything manually using the built-in translation editor or the inline frontend editor. DeepL simply speeds up the process.
+No. DeepL is entirely optional. Open World ships with **Google Translate Free inherently built-in** so you can bulk-translate your site out of the box without any keys or registration. You can also translate everything manually. DeepL is simply offered as an alternative premium API translation engine.
 
 = Will this slow down my site? =
 

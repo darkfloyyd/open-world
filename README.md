@@ -11,7 +11,7 @@ Open World gives you full control over your website translations — no premium 
 | Feature | Description |
 |---|---|
 | **Zero DB Overhead** | Uses WordPress native text domains. No extra columns, no schema changes. |
-| **DeepL Auto-Translate** | Bulk-translate your entire store via DeepL API (Free & Pro plans supported). |
+| **Auto-Translate** | Bulk-translate your entire store via Google Translate Free (built-in) or the DeepL API. |
 | **Smart Scanner** | Crawls your live frontend and captures only strings actually rendered — skip lots of unused strings. |
 | **Inline Editor** | Translate strings visually while browsing your site. Click any text in the sidebar to jump straight to it. |
 | **Full WooCommerce Support** | Translates product titles, descriptions, categories, checkout fields, and order emails. |
@@ -29,7 +29,7 @@ Open World gives you full control over your website translations — no premium 
 2. Go to **Open World → Languages** and add your target languages (e.g. Polish, Spanish).
 3. Navigate to **Settings** and click **Smart Scan** — it will crawl your live pages and collect only the strings your site actually uses.
 4. Go to **Translations**, pick a language, and start translating.
-5. *(Optional)* Enter your **DeepL API Key** in Settings to auto-translate everything in bulk.
+5. Go to **Translations**, pick a language, and manually translate, or click **Auto-Translate** to automatically translate everything using Google Free or DeepL.
 
 ---
 
@@ -43,14 +43,13 @@ Translate directly while browsing your frontend:
 
 ---
 
-## DeepL Integration
+## Auto-Translate Engine
 
-Open World connects to the [DeepL API](https://developers.deepl.com/docs) and supports both **Free** and **Pro** plans.
+Translate your entire store in automated batches without typing a word. Open World comes with **Google Translate Free natively built-in** with zero configuration required. Alternatively, you can connect a DeepL API key if you prefer their translation engine.
 
-- Translates up to **50 strings per API call** in batches
-- Automatically handles rate limits and quota errors
-- Caches API usage stats (5-minute transient) to minimize requests
-- Language code mapping built-in (e.g. `en` → `EN-US`, `pt` → `PT-BR`, `zh` → `ZH-HANS`)
+- **Resilient Batching:** Both translation engines feature advanced, resilient network wrappers to smoothly push through massive batches of 100,000+ strings without cURL timeouts.
+- **Quota Management:** DeepL quota usage is monitored and cached locally to minimize API hits.
+- **Smart Mapping:** Native DeepL language code mapping is built directly into the engine (e.g. `en` → `EN-US`, `pt` → `PT-BR`).
 
 ---
 
@@ -122,7 +121,7 @@ Please open an issue first for larger features.
 - WordPress 6.0+
 - PHP 8.0+
 - WooCommerce 7.0+ *(optional, for WooCommerce features)*
-- DeepL API key *(optional, for auto-translation)*
+- Google Translate (built-in) or DeepL API key *(optional, for premium engines)*
 
 ---
 
