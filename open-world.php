@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name:       Open World
- * Plugin URI:        https://buymeacoffee.com/jakubmisiak
+ * Plugin URI:        https://github.com/darkfloyyd/open-world
  * Description:       Complete multilingual solution — dynamic strings, WooCommerce integration, URL-based language switcher for free.
  * Version:           1.0.0
  * Tested up to:      6.9
