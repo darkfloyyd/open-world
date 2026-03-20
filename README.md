@@ -103,6 +103,16 @@ Each language has three statuses:
 
 ---
 
+## Screenshots
+
+![Open World](https://github.com/user-attachments/assets/83f2331e-fd8b-4fb0-af4d-a527dc793158)
+![Translations](https://github.com/user-attachments/assets/bf9a9ac2-2cfe-4a08-bd87-c620d3f2fb05)
+![Language Management](https://github.com/user-attachments/assets/b253afdc-2f19-4ae0-8abc-f1bf03c9ecd6)
+![Auto-Translate](https://github.com/user-attachments/assets/af24ea1e-a378-4199-b22d-238715cd7e98)
+![Settings](https://github.com/user-attachments/assets/1633457d-4649-4675-973b-c3f7936818e6)
+
+---
+
 ## Contributing
 
 Open World is 100% open source (GPL-2.0+). Pull Requests are welcome for:
