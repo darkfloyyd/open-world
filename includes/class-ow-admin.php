@@ -596,7 +596,7 @@ class OW_Admin {
 				<div class="ow-settings-card">
 					<h3><?php echo  esc_html__( 'Quick Add (Known Language)', 'open-world' ) ?></h3>
 					<form method="post" action="<?php echo  esc_url( admin_url( 'admin-post.php' ) ) ?>">
-						<?php wp_nonce_field( 'ow_lang_action', 'ow_lang_nonce' ); ?>
+						<?php wp_nonce_field( 'ow_lang_action' ); ?>
 						<input type="hidden" name="action" value="ow_lang_action">
 						<input type="hidden" name="ow_action" value="add_known">
 						<select name="known_locale" style="width:100%">
@@ -618,7 +618,7 @@ class OW_Admin {
 				<div class="ow-settings-card">
 					<h3><?php echo  esc_html__( 'Add Custom Language', 'open-world' ) ?></h3>
 					<form method="post" action="<?php echo  esc_url( admin_url( 'admin-post.php' ) ) ?>">
-						<?php wp_nonce_field( 'ow_lang_action', 'ow_lang_nonce' ); ?>
+						<?php wp_nonce_field( 'ow_lang_action' ); ?>
 						<input type="hidden" name="action" value="ow_lang_action">
 						<input type="hidden" name="ow_action" value="add_custom">
 						<p>
@@ -959,11 +959,31 @@ class OW_Admin {
 				<div class="ow-settings-card">
 					<h2>🎯 <?php echo  esc_html__( 'Smart Scan', 'open-world' ) ?> <span style="font-size:.75rem;font-weight:400;color:var(--ow-emerald)"><?php echo  esc_html__( 'recommended', 'open-world' ) ?></span></h2>
 					<p class="description"><?php echo  esc_html__( 'Crawls all published pages and auto-detected WooCommerce endpoints (shop, cart, checkout, account). Captures only strings that are actually rendered on the frontend — typically 200–500 strings instead of tens of thousands.', 'open-world' ) ?></p>
+					<p class="description" style="color:var(--ow-muted);font-size:.85em;margin-top:4px">
+						<?php echo esc_html__( 'Note: Page crawling requires a valid SSL certificate on your server to function properly.', 'open-world' ) ?>
+					</p>
 					<form method="post" action="<?php echo  esc_url( admin_url( 'admin-post.php' ) ) ?>" style="margin-top:12px">
 						<?php wp_nonce_field( 'ow_scan_strings', 'ow_scan_nonce' ); ?>
 						<input type="hidden" name="action" value="ow_scan_strings">
 						<input type="hidden" name="scan_mode" value="smart">
 						<button type="submit" class="button button-primary"><?php echo  esc_html__( 'Run Smart Scan', 'open-world' ) ?></button>
+					</form>
+				</div>
+
+				<div class="ow-settings-card">
+					<h2>🛡️ <?php echo esc_html__( 'Scanner Security', 'open-world' ) ?></h2>
+					<p class="description"><?php echo esc_html__( 'Smart Scan crawls pages to find strings. It can forward your login cookies to accurately capture strings on restricted pages (e.g. My Account). If disabled, the scanner visits pages as a logged-out guest.', 'open-world' ) ?></p>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ) ?>" style="margin-top:12px">
+						<?php wp_nonce_field( 'ow_save_scanner_settings', 'ow_scanner_settings_nonce' ); ?>
+						<input type="hidden" name="action" value="ow_save_scanner_settings">
+						<label>
+							<input type="checkbox" name="ow_forward_cookies" value="1" <?php checked( get_option( 'ow_forward_cookies', 'yes' ), 'yes' ) ?>>
+							<strong><?php echo esc_html__( 'Forward essential session cookies during scans', 'open-world' ) ?></strong>
+						</label>
+						<p class="description" style="margin-top:4px; margin-left:24px; font-size:.85em; color:var(--ow-muted)">
+							<?php echo esc_html__( 'Only WordPress authentication and WooCommerce session cookies are forwarded. Requires acceptance for strict security compliance.', 'open-world' ) ?>
+						</p>
+						<button type="submit" class="button" style="margin-top:12px"><?php echo esc_html__( 'Save Preferences', 'open-world' ) ?></button>
 					</form>
 				</div>
 
@@ -1014,7 +1034,7 @@ class OW_Admin {
 					</script>
 				</div>
 
-				<div class="ow-settings-card" style="grid-column: 1 / -1">
+				<div class="ow-settings-card">
 					<h2><?php echo  esc_html__( 'Full Source Scan', 'open-world' ) ?> <span style="font-size:.75rem;font-weight:400;color:var(--ow-muted)"><?php echo  esc_html__( 'advanced', 'open-world' ) ?></span></h2>
 					<p class="description"><?php echo  esc_html__( 'Scans PHP source files and POT files for all gettext calls. Imports everything including admin-only strings. Can result in 10,000+ strings per source. Use only if you need complete coverage.', 'open-world' ) ?></p>
 					<form method="post" action="<?php echo  esc_url( admin_url( 'admin-post.php' ) ) ?>" style="margin-top:12px">
@@ -1024,7 +1044,7 @@ class OW_Admin {
 						<label><input type="checkbox" name="scan_theme" value="1"> <?php echo  esc_html__( 'Child theme', 'open-world' ) ?></label>
 						<label style="margin-left:12px"><input type="checkbox" name="scan_parent_theme" value="1"> <?php echo  esc_html__( 'Parent theme', 'open-world' ) ?></label>
 						<label style="margin-left:12px"><input type="checkbox" name="scan_woocommerce" value="1"> <?php echo  esc_html__( 'WooCommerce POT', 'open-world' ) ?> <span style="font-size:.75em;color:var(--ow-teal-dark)">(~14,000 strings)</span></label>
-						<label style="margin-left:12px"><input type="checkbox" name="scan_pages" value="1" checked> <?php echo  esc_html__( 'Page crawl', 'open-world' ) ?></label>
+						<label style="display: inline-flex;margin-top: 12px;gap: 4px;align-items: flex-end;"><input type="checkbox" name="scan_pages" value="1" checked> <?php echo  esc_html__( 'Page crawl', 'open-world' ) ?> <span style="font-size:.75em;color:var(--ow-muted)">(<?php echo esc_html__( 'requires valid SSL', 'open-world' ) ?>)</span></label>
 						<br><br>
 						<button type="submit" class="button"><?php echo  esc_html__( 'Run Full Source Scan', 'open-world' ) ?></button>
 					</form>
@@ -1385,6 +1405,18 @@ class OW_Admin {
 			$label,
 			$total
 		), 60 );
+		wp_safe_redirect( admin_url( 'admin.php?page=ow-settings' ) );
+		exit;
+	}
+
+	public function handle_save_scanner_settings(): void {
+		check_admin_referer( 'ow_save_scanner_settings', 'ow_scanner_settings_nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) wp_die( 'Unauthorized' );
+
+		$forward_cookies = ! empty( $_POST['ow_forward_cookies'] ) ? 'yes' : 'no';
+		update_option( 'ow_forward_cookies', $forward_cookies );
+
+		set_transient( 'ow_last_scan_result', __( 'Scanner security preferences saved.', 'open-world' ), 60 );
 		wp_safe_redirect( admin_url( 'admin.php?page=ow-settings' ) );
 		exit;
 	}

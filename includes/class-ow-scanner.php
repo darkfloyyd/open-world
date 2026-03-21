@@ -224,19 +224,40 @@ class OW_Scanner {
 	 * Uses X-OW-Scan header to activate capture mode in the plugin engine.
 	 */
 	public function scan_dynamic_strings( string $page_url ): array {
+		$page_url = esc_url_raw( $page_url );
+
+		// 1. Restrict scanner to same origin requests as an extra safety layer
+		$home_host = wp_parse_url( home_url(), PHP_URL_HOST );
+		$page_host = wp_parse_url( $page_url, PHP_URL_HOST );
+		if ( ! $home_host || ! $page_host || $home_host !== $page_host ) {
+			return [];
+		}
+
 		$transient_key = 'ow_scan_' . md5( $page_url );
 
 		$cookies = [];
-		// Pass admin auth cookies so restricted pages are accessible
-		foreach ( $_COOKIE as $name => $value ) {
-			$cookies[] = new WP_Http_Cookie( [ 'name' => $name, 'value' => $value ] );
+		// Optionally disable cookie forwarding for security-sensitive users (via Settings UI or constant)
+		$default_forward = get_option( 'ow_forward_cookies', 'yes' ) === 'yes' && ! defined( 'OW_SCANNER_DISABLE_COOKIE_FORWARDING' );
+		$forward_cookies = apply_filters( 'ow_scanner_forward_cookies', $default_forward );
+
+		if ( $forward_cookies ) {
+			// Pass selective admin auth/session cookies so restricted pages are accessible
+			foreach ( $_COOKIE as $name => $value ) {
+				if (
+					strpos( $name, 'wordpress_logged_in_' ) === 0 ||
+					strpos( $name, 'woocommerce_' ) === 0 ||
+					strpos( $name, 'wp_woocommerce_session_' ) === 0
+				) {
+					$cookies[] = new WP_Http_Cookie( [ 'name' => $name, 'value' => $value ] );
+				}
+			}
 		}
 
 		wp_remote_get( $page_url, [
-			'timeout' => 20,
-			'headers' => [ 'X-OW-Scan' => '1' ],
-			'cookies' => $cookies,
-			'sslverify' => false,
+			'timeout'   => 20,
+			'headers'   => [ 'X-OW-Scan' => '1' ],
+			'cookies'   => $cookies,
+			'sslverify' => true,
 		] );
 
 		// Results are stored by the engine during the remote request
