@@ -170,6 +170,20 @@ class OW_DeepL {
 		];
 	}
 
+	public static function translate_single( string $text, string $target_lang ): string {
+		$source_lang_code = OW_Languages::get_source();
+		if ( ! $source_lang_code || $text === '' ) {
+			return '';
+		}
+
+		$result = self::translate( [ $text ], $source_lang_code, $target_lang );
+		if ( ! $result['ok'] ) {
+			return '';
+		}
+
+		return (string) ( $result['translations'][0] ?? '' );
+	}
+
 	// ── Batch Translate from DB ───────────────────────────────────────────────
 
 	/**
@@ -225,19 +239,31 @@ class OW_DeepL {
 
 		// Save translations
 		$saved = 0;
+		$placeholder_warnings = [];
 		foreach ( $result['translations'] as $i => $msgstr ) {
 			if ( isset( $ids[ $i ] ) && $msgstr !== '' ) {
 				OW_DB::update_msgstr( $ids[ $i ], $msgstr );
+				$row_after = OW_DB::get_row( $ids[ $i ] );
+				if ( $row_after && ! empty( $row_after['placeholder_warning'] ) && empty( $row_after['warning_ignored'] ) ) {
+					$detail = json_decode( (string) $row_after['placeholder_warning'], true );
+					$placeholder_warnings[] = [
+						'id'          => $ids[ $i ],
+						'original'    => (string) $row_after['msgid'],
+						'translation' => (string) $row_after['msgstr'],
+						'reason'      => is_array( $detail ) ? (string) ( $detail['reason'] ?? '' ) : '',
+					];
+				}
 				$saved++;
 			}
 		}
 
 		return [
-			'ok'         => true,
-			'translated' => $saved,
-			'chars_used' => $result['chars_used'],
-			'remaining'  => max( 0, $total_remaining - $saved ),
-			'error'      => '',
+			'ok'                   => true,
+			'translated'           => $saved,
+			'chars_used'           => $result['chars_used'],
+			'remaining'            => max( 0, $total_remaining - $saved ),
+			'placeholder_warnings' => $placeholder_warnings,
+			'error'                => '',
 		];
 	}
 

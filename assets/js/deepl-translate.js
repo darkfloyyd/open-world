@@ -12,10 +12,8 @@
 	const i18n    = cfg.i18n || {};
 	const ajaxurl = cfg.ajaxurl;
 	const nonce   = cfg.nonce;
-	// 'google_free' when that provider is enabled, 'deepl' otherwise
-	const provider = cfg.provider || 'deepl';
+	const saveNonce = cfg.saveNonce || nonce;
 
-	// DOM elements
 	const elLang       = document.getElementById('ow-at-lang');
 	const elDomain     = document.getElementById('ow-at-domain');
 	const elSourceType = document.getElementById('ow-at-source-type');
@@ -28,6 +26,10 @@
 	const elStatus     = document.getElementById('ow-at-status');
 	const elResult     = document.getElementById('ow-at-result');
 	const elResultText = document.getElementById('ow-at-result-text');
+	const elRejectedPanel = document.getElementById('ow-rejected-panel');
+	const elRejectedCount = document.getElementById('ow-rejected-count');
+	const elRejectedTableBody = document.querySelector('#ow-rejected-table tbody');
+	const elRetryAllWarnings = document.getElementById('ow-retranslate-all-warnings');
 
 	if (!elLang || !elStartBtn) return;
 
@@ -60,7 +62,79 @@
 		elResultText.textContent = msg;
 	}
 
-	// ── Preview ───────────────────────────────────────────────────────────────
+	function updateRejectedCount() {
+		if (!elRejectedPanel || !elRejectedCount || !elRejectedTableBody) return;
+
+		const count = elRejectedTableBody.querySelectorAll('tr').length;
+		elRejectedCount.textContent = count.toLocaleString();
+		elRejectedPanel.style.display = count > 0 ? 'block' : 'none';
+	}
+
+	function clearRejectedRows() {
+		if (!elRejectedTableBody) return;
+		elRejectedTableBody.innerHTML = '';
+		updateRejectedCount();
+	}
+
+	function addRejectedRows(warnings) {
+		if (!elRejectedTableBody || !Array.isArray(warnings)) return;
+
+		warnings.forEach(function (warning) {
+			if (!warning || !warning.id) return;
+
+			const existing = elRejectedTableBody.querySelector('tr[data-id="' + warning.id + '"]');
+			if (existing) {
+				existing.querySelector('.ow-rejected-translation').textContent = warning.translation || '';
+				existing.querySelector('.ow-rejected-reason').textContent = warning.reason || '';
+				return;
+			}
+
+			const tr = document.createElement('tr');
+			tr.dataset.id = String(warning.id);
+			tr.innerHTML =
+				'<td class="ow-rejected-original"></td>' +
+				'<td class="ow-rejected-translation"></td>' +
+				'<td class="ow-rejected-reason"></td>' +
+				'<td><button type="button" class="button button-small ow-rejected-translate-now">' + (i18n.translate_now || 'Translate now') + '</button></td>';
+			tr.querySelector('.ow-rejected-original').textContent = warning.original || '';
+			tr.querySelector('.ow-rejected-translation').textContent = warning.translation || '';
+			tr.querySelector('.ow-rejected-reason').textContent = warning.reason || '';
+			elRejectedTableBody.appendChild(tr);
+		});
+
+		updateRejectedCount();
+	}
+
+	async function retranslateSingle(id) {
+		const body = new URLSearchParams({
+			action: 'ow_retranslate_single',
+			id: id,
+			_ajax_nonce: saveNonce
+		});
+
+		const response = await fetch(ajaxurl, { method: 'POST', credentials: 'same-origin', body });
+		const data = await response.json();
+
+		if (!data.success) {
+			throw new Error(data.data || 'translate_failed');
+		}
+
+		const warning = data.data.warning || {};
+		const hasWarning = warning && !warning.ignored && (warning.placeholder || warning.html);
+		const row = elRejectedTableBody ? elRejectedTableBody.querySelector('tr[data-id="' + id + '"]') : null;
+
+		if (row) {
+			if (hasWarning) {
+				row.querySelector('.ow-rejected-translation').textContent = data.data.msgstr || '';
+				row.querySelector('.ow-rejected-reason').textContent = (data.data.warning_messages || []).join(' | ');
+			} else {
+				row.remove();
+			}
+			updateRejectedCount();
+		}
+
+		return data;
+	}
 
 	async function preview() {
 		elPreviewInfo.textContent = '...';
@@ -91,15 +165,13 @@
 		}
 	}
 
-	// ── Translate loop ────────────────────────────────────────────────────────
-
 	async function translateLoop() {
 		running = true;
 		elStartBtn.disabled = true;
 		elStopBtn.disabled  = false;
 		elResult.style.display = 'none';
+		clearRejectedRows();
 
-		// If no preview done yet, get count first
 		if (totalStrings === 0) {
 			await preview();
 			if (totalStrings === 0) {
@@ -164,6 +236,7 @@
 
 				doneStrings += r.translated;
 				totalChars  += r.chars_used;
+				addRejectedRows(r.placeholder_warnings || []);
 				updateProgress();
 
 				if (r.remaining <= 0 || r.translated === 0) {
@@ -196,7 +269,6 @@
 	}
 
 	// ── Event listeners ───────────────────────────────────────────────────────
-
 	elPreviewBtn.addEventListener('click', preview);
 
 	elStartBtn.addEventListener('click', function () {
@@ -207,5 +279,40 @@
 		running = false;
 		elStatus.textContent = i18n.stopped;
 	});
+
+	if (elRejectedTableBody) {
+		elRejectedTableBody.addEventListener('click', async function (event) {
+			const button = event.target.closest('.ow-rejected-translate-now');
+			if (!button) return;
+
+			const row = button.closest('tr');
+			if (!row) return;
+
+			button.disabled = true;
+			try {
+				await retranslateSingle(row.dataset.id);
+			} catch (e) {
+				button.disabled = false;
+			}
+		});
+	}
+
+	if (elRetryAllWarnings) {
+		elRetryAllWarnings.addEventListener('click', async function () {
+			const buttons = Array.from(document.querySelectorAll('.ow-rejected-translate-now'));
+			elRetryAllWarnings.disabled = true;
+			for (const button of buttons) {
+				const row = button.closest('tr');
+				if (!row) continue;
+				button.disabled = true;
+				try {
+					await retranslateSingle(row.dataset.id);
+				} catch (e) {
+					button.disabled = false;
+				}
+			}
+			elRetryAllWarnings.disabled = false;
+		});
+	}
 
 })();

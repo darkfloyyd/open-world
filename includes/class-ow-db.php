@@ -42,6 +42,9 @@ class OW_DB {
 			source_type  varchar(20)  DEFAULT 'static',
 			source_name  varchar(255) DEFAULT NULL,
 			source_file  varchar(500) DEFAULT NULL,
+			placeholder_warning text DEFAULT NULL,
+			html_warning        text DEFAULT NULL,
+			warning_ignored     tinyint(1) DEFAULT 0,
 			updated_at   datetime     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 			PRIMARY KEY  (id),
 			UNIQUE KEY   uniq_translation (lang, domain(50), msgid(200)),
@@ -56,6 +59,17 @@ class OW_DB {
 
 	private static function cache_key( string $lang, string $domain ): string {
 		return "ow_{$lang}_{$domain}";
+	}
+
+	private static function warning_column( string $type ): string {
+		if ( $type === 'placeholder' ) return 'placeholder_warning';
+		if ( $type === 'html' ) return 'html_warning';
+		return '';
+	}
+
+	private static function clear_cache( string $lang, string $domain ): void {
+		delete_transient( self::cache_key( $lang, $domain ) );
+		unset( self::$mem[ "{$lang}_{$domain}" ] );
 	}
 
 	private static function load_bulk( string $lang, string $domain ): array {
@@ -192,8 +206,17 @@ class OW_DB {
 		$table = $wpdb->prefix . self::TABLE;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$row = $wpdb->get_row( $wpdb->prepare( "SELECT lang, domain FROM {$table} WHERE id = %d", $id ), ARRAY_A );
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT msgid, msgid_plural, lang, domain FROM {$table} WHERE id = %d", $id ), ARRAY_A );
 		if ( ! $row ) return false;
+
+		$placeholder_result = OW_Placeholder_Validator::validate(
+			(string) $row['msgid'],
+			$msgstr,
+			$row['msgid_plural'] ?: null,
+			$plural_forms
+		);
+
+		$html_result = OW_HTML_Validator::validate( (string) $row['msgid'], $msgstr );
 
 		$data = [ 'msgstr' => $msgstr ];
 		if ( $plural_forms !== null ) {
@@ -203,10 +226,126 @@ class OW_DB {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$ok = $wpdb->update( $table, $data, [ 'id' => $id ] ) !== false;
 
-		delete_transient( self::cache_key( $row['lang'], $row['domain'] ) );
-		unset( self::$mem[ "{$row['lang']}_{$row['domain']}" ] );
+		if ( $placeholder_result !== true ) {
+			self::set_warning( $id, 'placeholder', $placeholder_result );
+		} else {
+			self::clear_warning( $id, 'placeholder' );
+		}
+
+		if ( $html_result !== true ) {
+			self::set_warning( $id, 'html', $html_result );
+		} else {
+			self::clear_warning( $id, 'html' );
+		}
+
+		self::clear_cache( $row['lang'], $row['domain'] );
 
 		return $ok;
+	}
+
+	public static function get_row( int $id ): ?array {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, lang, domain, msgid, msgid_plural, msgstr, msgstr_plural, context, source_type, source_name, source_file, placeholder_warning, html_warning, warning_ignored, updated_at
+				 FROM {$table}
+				 WHERE id = %d",
+				$id
+			),
+			ARRAY_A
+		);
+		return is_array( $row ) ? $row : null;
+	}
+
+	public static function set_warning( int $id, string $type, array $detail ): bool {
+		global $wpdb;
+		$column = self::warning_column( $type );
+		if ( ! $column ) return false;
+		$table = $wpdb->prefix . self::TABLE;
+		$data  = [
+			$column            => wp_json_encode( $detail ),
+			'warning_ignored'  => 0,
+		];
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return $wpdb->update( $table, $data, [ 'id' => $id ] ) !== false;
+	}
+
+	public static function clear_warning( int $id, string $type ): bool {
+		global $wpdb;
+		$column = self::warning_column( $type );
+		if ( ! $column ) return false;
+		$table = $wpdb->prefix . self::TABLE;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$ok = $wpdb->update( $table, [ $column => null ], [ 'id' => $id ] ) !== false;
+		if ( ! $ok ) return false;
+
+		$row = self::get_row( $id );
+		if ( ! $row ) return true;
+
+		if ( empty( $row['placeholder_warning'] ) && empty( $row['html_warning'] ) ) {
+			self::ignore_warning( $id, false );
+		}
+
+		return true;
+	}
+
+	public static function ignore_warning( int $id, bool $ignored = true ): bool {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return $wpdb->update( $table, [ 'warning_ignored' => $ignored ? 1 : 0 ], [ 'id' => $id ] ) !== false;
+	}
+
+	public static function get_warnings( string $lang, string $type = '' ): array {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE;
+		$wheres = [
+			$wpdb->prepare( 'lang = %s', $lang ),
+			'warning_ignored = 0',
+		];
+
+		$column = self::warning_column( $type );
+		if ( $column ) {
+			$wheres[] = "{$column} IS NOT NULL";
+		} else {
+			$wheres[] = '(placeholder_warning IS NOT NULL OR html_warning IS NOT NULL)';
+		}
+
+		$where_sql = 'WHERE ' . implode( ' AND ', $wheres );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return $wpdb->get_results(
+			"SELECT id, lang, domain, msgid, msgid_plural, msgstr, msgstr_plural, placeholder_warning, html_warning, warning_ignored, updated_at
+			 FROM {$table}
+			 {$where_sql}
+			 ORDER BY updated_at DESC, id DESC",
+			ARRAY_A
+		);
+	}
+
+	public static function count_warnings( string $lang, string $type = '' ): int {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE;
+		$wheres = [
+			$wpdb->prepare( 'lang = %s', $lang ),
+			'warning_ignored = 0',
+		];
+
+		$column = self::warning_column( $type );
+		if ( $column ) {
+			$wheres[] = "{$column} IS NOT NULL";
+		} else {
+			$wheres[] = '(placeholder_warning IS NOT NULL OR html_warning IS NOT NULL)';
+		}
+
+		$where_sql = 'WHERE ' . implode( ' AND ', $wheres );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} {$where_sql}" );
 	}
 
 	/**
@@ -218,7 +357,7 @@ class OW_DB {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		return $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT id, msgid, msgid_plural, msgstr, msgstr_plural, context, source_type, source_name, source_file, updated_at
+				"SELECT id, msgid, msgid_plural, msgstr, msgstr_plural, context, source_type, source_name, source_file, placeholder_warning, html_warning, warning_ignored, updated_at
 				 FROM {$table}
 				 WHERE lang = %s AND domain = %s
 				 ORDER BY source_type, source_name, id",
@@ -248,6 +387,7 @@ class OW_DB {
 		if ( $domain ) $wheres[] = $wpdb->prepare( 'domain = %s', $domain );
 		if ( $status === 'translated' )   $wheres[] = "msgstr != ''";
 		if ( $status === 'untranslated' ) $wheres[] = "msgstr = ''";
+		if ( $status === 'warning' ) $wheres[] = '((placeholder_warning IS NOT NULL OR html_warning IS NOT NULL) AND warning_ignored = 0)';
 		if ( $search ) {
 			$like     = '%' . $wpdb->esc_like( $search ) . '%';
 			$wheres[] = $wpdb->prepare( '(msgid LIKE %s OR msgstr LIKE %s)', $like, $like );
@@ -260,7 +400,7 @@ class OW_DB {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		return $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT id, lang, domain, msgid, msgid_plural, msgstr, msgstr_plural, context, source_type, source_name, source_file, updated_at
+				"SELECT id, lang, domain, msgid, msgid_plural, msgstr, msgstr_plural, context, source_type, source_name, source_file, placeholder_warning, html_warning, warning_ignored, updated_at
 				 FROM {$table}
 				 {$where_sql}
 				 ORDER BY source_type, source_name, id
@@ -279,6 +419,7 @@ class OW_DB {
 		if ( $domain ) $wheres[] = $wpdb->prepare( 'domain = %s', $domain );
 		if ( $status === 'translated' )   $wheres[] = "msgstr != ''";
 		if ( $status === 'untranslated' ) $wheres[] = "msgstr = ''";
+		if ( $status === 'warning' ) $wheres[] = '((placeholder_warning IS NOT NULL OR html_warning IS NOT NULL) AND warning_ignored = 0)';
 		if ( $search ) {
 			$like = '%' . $wpdb->esc_like( $search ) . '%';
 			$wheres[] = $wpdb->prepare( '(msgid LIKE %s OR msgstr LIKE %s)', $like, $like );

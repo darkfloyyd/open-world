@@ -158,7 +158,7 @@
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
 	gap: 16px;
-	margin: 20px 0;
+	margin-top: 20px;
 }
 
 .ow-stat-card {
@@ -242,7 +242,7 @@
 
 /* ── Quick Actions Bar ──────────────────────────────────────── */
 .ow-actions {
-	margin-top: 24px;
+	margin-top: 20px;
 	padding: 18px 20px;
 	background: var(--ow-surface);
 	border: 1px solid var(--ow-border);
@@ -260,11 +260,60 @@
 	margin: 0 0 12px;
 }
 
+td.ow-col-status {
+    vertical-align: middle !important;
+}
+
+.ow-warning-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: #fff4e5;
+	color: #d97706;
+	cursor: pointer;
+	font-size: 15px;
+	font-weight: 700;
+}
+
+.ow-warning-details {
+	position: absolute;
+	right: 12px;
+	z-index: 5;
+	min-width: 280px;
+	max-width: 420px;
+	margin-top: 8px;
+	padding: 12px;
+	background: #fff;
+	border: 1px solid #f0c36d;
+	border-radius: var(--ow-radius-sm);
+	box-shadow: var(--ow-shadow-md);
+	text-align: left;
+}
+
+.ow-warning-message + .ow-warning-message {
+	margin-top: 8px;
+}
+
+.ow-warning-actions {
+	display: flex;
+	gap: 8px;
+	margin-top: 12px;
+}
+
+.ow-col-status {
+	position: relative;
+}
+
 .ow-actions-row {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 10px;
-	align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    height: 70px;
+    justify-content: space-around;
 }
 
 /* ── Language Tabs ──────────────────────────────────────────── */

@@ -45,6 +45,12 @@ class OW_Admin
 		wp_localize_script('ow-editor', 'owEditor', [
 			'nonce' => wp_create_nonce('ow_save_translation'),
 			'ajaxurl' => admin_url('admin-ajax.php'),
+			'i18n' => [
+				'warning_title' => __('Warning', 'open-world-translate'),
+				'ignore' => __('Ignore', 'open-world-translate'),
+				'retranslate' => __('Re-translate', 'open-world-translate'),
+				'network_error' => __('Network error', 'open-world-translate'),
+			],
 		]);
 	}
 
@@ -57,6 +63,12 @@ class OW_Admin
 		$flags = OW_Languages::get_flags();
 		$default = OW_Languages::get_default();
 		$targets = OW_Languages::get_target_languages();
+		$ph_total = 0;
+		$html_total = 0;
+		foreach ($targets as $lang) {
+			$ph_total += OW_DB::count_warnings($lang, 'placeholder');
+			$html_total += OW_DB::count_warnings($lang, 'html');
+		}
 		?>
 		<div class="wrap ow-wrap">
 			<div class="ow-page-header">
@@ -92,6 +104,8 @@ class OW_Admin
 				<?php endif; ?>
 			</div>
 
+			<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+
 			<div class="ow-actions">
 				<h2><?php echo esc_html__('Quick Actions', 'open-world-translate') ?></h2>
 				<div class="ow-actions-row">
@@ -105,6 +119,49 @@ class OW_Admin
 				<a href="<?php echo esc_url(admin_url('admin.php?page=ow-auto-translate')) ?>" class="button"><?php echo esc_html__('Auto-Translate', 'open-world-translate') ?></a>
 				<a href="<?php echo esc_url(admin_url('admin.php?page=ow-settings')) ?>" class="button"><?php echo esc_html__('Settings', 'open-world-translate') ?></a>
 				</div>
+			</div>
+
+			<div class="ow-settings-card" style="margin-top:20px">
+				<h2><?php echo esc_html__('Translation Health', 'open-world-translate') ?></h2>
+				<?php if ($ph_total || $html_total): ?>
+				<p>
+					<span style="display:inline-flex;align-items:center;gap:6px;margin-right:18px;">
+						<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:<?php echo $ph_total ? '#d63638' : '#00a32a' ?>;"></span>
+						<strong><?php echo esc_html($ph_total) ?></strong> <?php echo esc_html__('placeholder warnings', 'open-world-translate') ?>
+						<span class="ow-info" title="<?php echo esc_attr(
+							__('Placeholder warnings mean the translation changed, removed, or reordered printf-style placeholders like', 'open-world-translate')
+							. ' %s, %d, %1$s, '
+							. __('which can break dynamic values shown to users.', 'open-world-translate')
+						) ?>">i</span>
+					</span>
+					<span style="display:inline-flex;align-items:center;gap:6px;">
+						<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:<?php echo $html_total ? '#d63638' : '#00a32a' ?>;"></span>
+						<strong><?php echo esc_html($html_total) ?></strong> <?php echo esc_html__('HTML warnings', 'open-world-translate') ?>
+						<span class="ow-info" title="<?php echo esc_attr__('HTML warnings mean the translation does not preserve the same HTML tag structure as the original string, for example missing tags, extra tags, or invalid nesting.', 'open-world-translate') ?>">i</span>
+					</span>
+				</p>
+				<a href="<?php echo esc_url(admin_url('admin.php?page=ow-translations&status=warning')) ?>" class="button"><?php echo esc_html__('Review all warnings', 'open-world-translate') ?></a>
+				<?php else: ?>
+				<p>
+					<span style="display:inline-flex;align-items:center;gap:6px;margin-right:18px;">
+						<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#00a32a;"></span>
+						<strong>0</strong> <?php echo esc_html__('placeholder warnings', 'open-world-translate') ?>
+						<span class="ow-info" title="<?php echo esc_attr(
+							__('Placeholder warnings mean the translation changed, removed, or reordered printf-style placeholders like', 'open-world-translate')
+							. ' %s, %d, %1$s, '
+							. __('which can break dynamic values shown to users.', 'open-world-translate')
+						) ?>">i</span>
+					</span>
+					<span style="display:inline-flex;align-items:center;gap:6px;">
+						<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#00a32a;"></span>
+						<strong>0</strong> <?php echo esc_html__('HTML warnings', 'open-world-translate') ?>
+						<span class="ow-info" title="<?php echo esc_attr__('HTML warnings mean the translation does not preserve the same HTML tag structure as the original string, for example missing tags, extra tags, or invalid nesting.', 'open-world-translate') ?>">i</span>
+					</span>
+				</p>
+				<p style="color:#00a32a; margin-bottom: 0;"><?php echo esc_html__('All translations validated', 'open-world-translate') ?></p>
+				<?php endif; ?>
+			</div>
+
 			</div>
 
 			<div class="ow-settings-card" style="margin-top:20px">
@@ -294,6 +351,7 @@ class OW_Admin
 					<option value=""><?php echo esc_html__('All', 'open-world-translate') ?></option>
 					<option value="untranslated" <?php echo selected($status, 'untranslated', false) ?>><?php echo esc_html__('Untranslated', 'open-world-translate') ?></option>
 					<option value="translated"   <?php echo selected($status, 'translated', false) ?>><?php echo esc_html__('Translated', 'open-world-translate') ?></option>
+					<option value="warning" <?php echo selected($status, 'warning', false) ?>><?php echo esc_html__('Warning', 'open-world-translate') ?></option>
 				</select>
 				<select name="source_type" style="padding-right: 25px;" title="<?php echo esc_attr__('Filter by source type: theme = found in theme PHP files, plugin = from plugin PHP/POT, dynamic = captured at runtime during page crawl, static = manually imported or seeded', 'open-world-translate') ?>">
 					<option value=""><?php echo esc_html__('All types', 'open-world-translate') ?></option>
@@ -353,8 +411,16 @@ class OW_Admin
 					foreach ($rows as $row):
 						$has_plural = !empty($row['msgid_plural']);
 						$plural_forms = $row['msgstr_plural'] ? json_decode($row['msgstr_plural'], true) : [];
+						$pw = $row['placeholder_warning'] ?? null;
+						$hw = $row['html_warning'] ?? null;
+						$ignored = (int) ($row['warning_ignored'] ?? 0);
+						$warning_payload = $this->get_warning_payload($row);
 						?>
-					<tr data-id="<?php echo esc_attr($row['id']) ?>" class="<?php echo empty($row['msgstr']) ? 'ow-row-untranslated' : 'ow-row-translated' ?>">
+					<tr
+						data-id="<?php echo esc_attr($row['id']) ?>"
+						data-warning="<?php echo esc_attr(wp_json_encode($warning_payload)) ?>"
+						class="<?php echo empty($row['msgstr']) ? 'ow-row-untranslated' : 'ow-row-translated' ?>"
+					>
 						<td class="ow-col-source">
 							<span class="ow-source-badge ow-source-<?php echo esc_attr($row['source_type'] ?? 'static') ?>">
 								<?php echo esc_html($row['source_type'] ?? '') ?>
@@ -391,6 +457,22 @@ class OW_Admin
 						</td>
 						<td class="ow-col-status">
 							<span class="ow-save-status" data-id="<?php echo esc_attr($row['id']) ?>"></span>
+							<?php if (($pw || $hw) && !$ignored): ?>
+							<span class="ow-warning-badge" data-id="<?php echo esc_attr($row['id']) ?>" title="<?php echo esc_attr__('Warning', 'open-world-translate') ?>">⚠</span>
+							<div class="ow-warning-details" data-id="<?php echo esc_attr($row['id']) ?>" style="display:none">
+								<?php foreach ($this->format_warning_details($row) as $warning_message): ?>
+								<div class="ow-warning-message"><?php echo esc_html($warning_message) ?></div>
+								<?php endforeach; ?>
+								<div class="ow-warning-actions">
+									<button class="ow-ignore-btn button button-small" data-id="<?php echo esc_attr($row['id']) ?>">
+										<?php echo esc_html__('Ignore', 'open-world-translate') ?>
+									</button>
+									<button class="ow-retranslate-btn button button-small" data-id="<?php echo esc_attr($row['id']) ?>">
+										<?php echo esc_html__('Re-translate', 'open-world-translate') ?>
+									</button>
+								</div>
+							</div>
+							<?php endif; ?>
 						</td>
 					</tr>
 					<?php endforeach; ?>
@@ -462,6 +544,70 @@ class OW_Admin
 			echo wp_kses_post(sprintf('<a class="ow-page-link" href="%s" title="%s">&raquo;</a>', $link($current + 1), esc_attr__('Next', 'open-world-translate')));
 
 		echo '</nav>';
+	}
+
+	private function get_warning_payload(array $row): array
+	{
+		return [
+			'placeholder' => $this->decode_warning($row['placeholder_warning'] ?? null),
+			'html' => $this->decode_warning($row['html_warning'] ?? null),
+			'ignored' => (int) ($row['warning_ignored'] ?? 0),
+		];
+	}
+
+	private function decode_warning(?string $warning): ?array
+	{
+		if (!$warning) {
+			return null;
+		}
+
+		$decoded = json_decode($warning, true);
+		return is_array($decoded) ? $decoded : null;
+	}
+
+	private function format_warning_details(array $row): array
+	{
+		$messages = [];
+		$placeholder = $this->decode_warning($row['placeholder_warning'] ?? null);
+		$html = $this->decode_warning($row['html_warning'] ?? null);
+
+		if ($placeholder) {
+			$message = __('Placeholder mismatch', 'open-world-translate');
+			if (!empty($placeholder['reason'])) {
+				$message .= ': ' . $placeholder['reason'];
+			}
+			if (!empty($placeholder['orig']) || !empty($placeholder['trans'])) {
+				$message .= ' — '
+					. __('expected', 'open-world-translate')
+					. ' '
+					. (string) ($placeholder['orig'] ?? '(none)')
+					. ', '
+					. __('got', 'open-world-translate')
+					. ' '
+					. (string) ($placeholder['trans'] ?? '(none)');
+			}
+			$messages[] = $message;
+		}
+
+		if ($html) {
+			$message = __('HTML mismatch', 'open-world-translate');
+			if (!empty($html['reason'])) {
+				$message .= ': ' . $html['reason'];
+			}
+			if (!empty($html['orig_tags']) || !empty($html['trans_tags'])) {
+				$message .= ' — '
+					. __('expected', 'open-world-translate')
+					. ' '
+					. (string) ($html['orig_tags'] ?? '(none)')
+					. ', '
+					. __('got', 'open-world-translate')
+					. ' '
+					. (string) ($html['trans_tags'] ?? '(none)');
+			}
+			$messages[] = $message;
+		}
+
+		return $messages;
 	}
 
 	// ── Languages Management ──────────────────────────────────────────────────
@@ -712,6 +858,7 @@ class OW_Admin
 		wp_localize_script('ow-deepl-translate', 'owDeepL', [
 			'ajaxurl' => admin_url('admin-ajax.php'),
 			'nonce' => wp_create_nonce('ow_deepl_translate'),
+			'saveNonce' => wp_create_nonce('ow_save_translation'),
 			'provider' => OW_Google_Free::is_enabled() ? 'google_free' : 'deepl',
 			'i18n' => [
 				'translating' => __('Translating...', 'open-world-translate'),
@@ -722,6 +869,14 @@ class OW_Admin
 				'strings' => __('strings', 'open-world-translate'),
 				'chars_used' => __('chars used', 'open-world-translate'),
 				'no_untranslated' => __('No untranslated strings match these filters.', 'open-world-translate'),
+				'manual_review' => __('strings need manual review', 'open-world-translate'),
+				'placeholder_review' => __('Placeholders could not be preserved during auto-translation.', 'open-world-translate'),
+				'translate_now' => __('Translate now', 'open-world-translate'),
+				'retry_all' => __('Retry all', 'open-world-translate'),
+				'original' => __('Original', 'open-world-translate'),
+				'translation' => __('Translation', 'open-world-translate'),
+				'reason' => __('Reason', 'open-world-translate'),
+				'action' => __('Action', 'open-world-translate'),
 			],
 		]);
 		?>
@@ -943,6 +1098,20 @@ class OW_Admin
 
 				<div id="ow-at-result" style="margin-top:12px;display:none" class="notice notice-success">
 					<p id="ow-at-result-text"></p>
+				</div>
+
+				<div id="ow-rejected-panel" style="display:none;margin-top:12px" class="notice notice-warning">
+					<p>
+						<strong>⚠ <span id="ow-rejected-count">0</span> <?php echo esc_html__('strings need manual review', 'open-world-translate') ?></strong>
+						— <?php echo esc_html__("Placeholders couldn't be preserved during auto-translation.", 'open-world-translate') ?>
+					</p>
+					<table id="ow-rejected-table" class="wp-list-table widefat striped">
+						<thead><tr><th><?php echo esc_html__('Original', 'open-world-translate') ?></th><th><?php echo esc_html__('Translation', 'open-world-translate') ?></th><th><?php echo esc_html__('Reason', 'open-world-translate') ?></th><th><?php echo esc_html__('Action', 'open-world-translate') ?></th></tr></thead>
+						<tbody></tbody>
+					</table>
+					<button id="ow-retranslate-all-warnings" class="button" style="margin-top:8px">
+						<?php echo esc_html__('Retry all', 'open-world-translate') ?>
+					</button>
 				</div>
 			</div>
 		</div>
@@ -1288,7 +1457,12 @@ https://example.com/api" spellcheck="false"><?php echo esc_textarea(get_option('
 			wp_send_json_error('Invalid ID');
 
 		$ok = OW_DB::update_msgstr($id, $msgstr, $plural_forms);
-		wp_send_json_success(['saved' => $ok]);
+		$row = OW_DB::get_row($id);
+		wp_send_json_success([
+			'saved' => $ok,
+			'warning' => $row ? $this->get_warning_payload($row) : null,
+			'warning_messages' => $row ? $this->format_warning_details($row) : [],
+		]);
 	}
 
 	// ── AJAX: Set Language Status ─────────────────────────────────────────────
@@ -1419,6 +1593,56 @@ https://example.com/api" spellcheck="false"><?php echo esc_textarea(get_option('
 
 		$result = OW_Google_Free::translate_batch($lang, $domain, $source_type, $source);
 		wp_send_json_success($result);
+	}
+
+	public function ajax_ignore_warning(): void
+	{
+		check_ajax_referer('ow_save_translation');
+		if (!current_user_can('manage_options')) {
+			wp_send_json_error(__('Unauthorized', 'open-world-translate'), 403);
+		}
+
+		$id = (int) sanitize_text_field(wp_unslash($_POST['id'] ?? '0'));
+		if (!$id) {
+			wp_send_json_error('Invalid ID');
+		}
+
+		OW_DB::ignore_warning($id, true);
+		wp_send_json_success();
+	}
+
+	public function ajax_retranslate_single(): void
+	{
+		check_ajax_referer('ow_save_translation');
+		if (!current_user_can('manage_options')) {
+			wp_send_json_error(__('Unauthorized', 'open-world-translate'), 403);
+		}
+
+		$id = (int) sanitize_text_field(wp_unslash($_POST['id'] ?? '0'));
+		$row = OW_DB::get_row($id);
+
+		if (!$row) {
+			wp_send_json_error('not_found');
+			return;
+		}
+
+		$translated = OW_Google_Free::is_enabled()
+			? OW_Google_Free::translate_single((string) $row['msgid'], (string) $row['lang'])
+			: OW_DeepL::translate_single((string) $row['msgid'], (string) $row['lang']);
+
+		if (!$translated) {
+			wp_send_json_error('translate_failed');
+			return;
+		}
+
+		OW_DB::update_msgstr($id, $translated);
+		$row_after = OW_DB::get_row($id);
+
+		wp_send_json_success([
+			'msgstr' => $translated,
+			'warning' => $row_after ? $this->get_warning_payload($row_after) : null,
+			'warning_messages' => $row_after ? $this->format_warning_details($row_after) : [],
+		]);
 	}
 
 	// ── Admin POST: Language actions ──────────────────────────────────────────

@@ -4,7 +4,7 @@
  * Plugin Name:       Open World Translate
  * Plugin URI:        https://github.com/open-world-project/open-world-translate
  * Description:       Multilingual solution — dynamic strings, WooCommerce integration, URL-based language switcher for free.
- * Version:           1.1.7
+ * Version:           1.1.8
  * Tested up to:      6.9
  * Requires at least: 6.0
  * Requires PHP:      7.4
@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-define('OW_VERSION', '1.1.7');
+define('OW_VERSION', '1.1.8');
 define('OW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('OW_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('OW_PLUGIN_FILE', __FILE__);
@@ -48,6 +48,7 @@ register_deactivation_hook(__FILE__, function (): void {
 add_action('plugins_loaded', function (): void {
 	// Auto-create/upgrade tables without requiring deactivation + reactivation
 	OW_Languages::ensure_table_exists();
+	OW_DB::install();
 
 	$engine = new OW_Engine();
 	add_action('init', [$engine, 'register_filters'], 1);
@@ -109,6 +110,8 @@ add_action('plugins_loaded', function (): void {
 		add_action('wp_ajax_ow_deepl_preview', [$admin, 'ajax_deepl_preview']);
 		add_action('wp_ajax_ow_google_free_toggle', [$admin, 'ajax_google_free_toggle']);
 		add_action('wp_ajax_ow_google_free_translate', [$admin, 'ajax_google_free_translate']);
+		add_action('wp_ajax_ow_ignore_warning', [$admin, 'ajax_ignore_warning']);
+		add_action('wp_ajax_ow_retranslate_single', [$admin, 'ajax_retranslate_single']);
 		add_action('wp_ajax_ow_delete_all_translations', [$admin, 'ajax_delete_all_translations']);
 	}
 

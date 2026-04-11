@@ -142,11 +142,28 @@ class OW_PO {
 
 		foreach ( $rows as $row ) {
 			$lines[] = '#. source: ' . ( $row['source_name'] ?? '' ) . ( $row['source_file'] ? ' — ' . $row['source_file'] : '' );
+			if ( ! empty( $row['placeholder_warning'] ) ) {
+				$warning = json_decode( (string) $row['placeholder_warning'], true );
+				$lines[] = '#, fuzzy';
+				$lines[] = '# OW-WARNING: placeholder mismatch — orig: ' . ( $warning['orig'] ?? '' ) . ', trans: ' . ( $warning['trans'] ?? '' );
+			}
 			if ( $row['context'] ) {
 				$lines[] = 'msgctxt "' . $this->escape( $row['context'] ) . '"';
 			}
 			$lines[] = 'msgid "' . $this->escape( $row['msgid'] ) . '"';
-			$lines[] = 'msgstr "' . $this->escape( $row['msgstr'] ) . '"';
+			if ( ! empty( $row['msgid_plural'] ) ) {
+				$lines[] = 'msgid_plural "' . $this->escape( $row['msgid_plural'] ) . '"';
+				$plural_forms = ! empty( $row['msgstr_plural'] ) ? json_decode( (string) $row['msgstr_plural'], true ) : [];
+				if ( is_array( $plural_forms ) && ! empty( $plural_forms ) ) {
+					foreach ( $plural_forms as $index => $plural_form ) {
+						$lines[] = 'msgstr[' . (int) $index . '] "' . $this->escape( (string) $plural_form ) . '"';
+					}
+				} else {
+					$lines[] = 'msgstr[0] "' . $this->escape( $row['msgstr'] ) . '"';
+				}
+			} else {
+				$lines[] = 'msgstr "' . $this->escape( $row['msgstr'] ) . '"';
+			}
 			$lines[] = '';
 		}
 
