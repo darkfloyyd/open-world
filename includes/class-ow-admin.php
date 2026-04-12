@@ -827,7 +827,7 @@ class OW_Admin
 				});
 			});
 		})(jQuery);
-		</script>
+		<?php wp_add_inline_script( 'ow-editor', ob_get_clean() ); ?>
 		<?php
 	}
 

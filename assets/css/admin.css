@@ -251,15 +251,6 @@
 	box-shadow: var(--ow-shadow-sm);
 }
 
-.ow-actions h2 {
-	font-size: .85rem;
-	font-weight: 700;
-	text-transform: uppercase;
-	letter-spacing: .06em;
-	color: var(--ow-muted);
-	margin: 0 0 12px;
-}
-
 td.ow-col-status {
     vertical-align: middle !important;
 }
@@ -798,7 +789,8 @@ td.ow-col-status {
 }
 
 .ow-settings-card h2,
-.ow-settings-card h3 {
+.ow-settings-card h3,
+.ow-actions h2  {
 	margin-top: 0;
 	color: var(--ow-charcoal);
 	font-size: .95rem;
